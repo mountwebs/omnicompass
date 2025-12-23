@@ -50,6 +50,8 @@ export const Compass = () => {
         // Cleanup
         return () => {
             locationService.clearWatch(watchId);
+            wsService.disconnect();
+            sceneManager.dispose();
         };
     }, []);
 

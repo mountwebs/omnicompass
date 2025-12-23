@@ -29,7 +29,7 @@ export class SceneManager {
         this.scene.add(directionalLight);
 
         // Camera position
-        this.camera.position.z = 0.1; // Close to center
+        this.camera.position.z = 5; // Move camera back to see the arrow
 
         // Handle resize
         window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -74,6 +74,7 @@ export class SceneManager {
     }
 
     public addArrow(arrow: THREE.Group) {
+        console.log('Adding arrow to scene', arrow);
         this.arrow = arrow;
         this.scene.add(this.arrow);
     }
@@ -109,5 +110,12 @@ export class SceneManager {
     
     public getScene(): THREE.Scene {
         return this.scene;
+    }
+
+    public dispose() {
+        if (this.container.contains(this.renderer.domElement)) {
+            this.container.removeChild(this.renderer.domElement);
+        }
+        this.renderer.dispose();
     }
 }

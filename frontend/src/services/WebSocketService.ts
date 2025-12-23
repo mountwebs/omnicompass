@@ -10,6 +10,7 @@ export class WebSocketService {
     private socket: WebSocket | null = null;
     private url: string;
     private onUpdate: (data: DirectionUpdate) => void;
+    private shouldReconnect: boolean = true;
 
     constructor(url: string, onUpdate: (data: DirectionUpdate) => void) {
         this.url = url;
@@ -17,6 +18,7 @@ export class WebSocketService {
     }
 
     public connect() {
+        this.shouldReconnect = true;
         this.socket = new WebSocket(this.url);
 
         this.socket.onopen = () => {
@@ -31,8 +33,10 @@ export class WebSocketService {
         };
 
         this.socket.onclose = () => {
-            console.log("Disconnected from WebSocket. Reconnecting in 3s...");
-            setTimeout(() => this.connect(), 3000);
+            if (this.shouldReconnect) {
+                console.log("Disconnected from WebSocket. Reconnecting in 3s...");
+                setTimeout(() => this.connect(), 3000);
+            }
         };
 
         this.socket.onerror = (err) => {
@@ -40,6 +44,15 @@ export class WebSocketService {
             this.socket?.close();
         };
     }
+
+    public disconnect() {
+        this.shouldReconnect = false;
+        if (this.socket) {
+            this.socket.close();
+            this.socket = null;
+        }
+    }
+
 
     public sendLocation(latitude: number, longitude: number, elevation: number = 0) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {

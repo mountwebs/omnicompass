@@ -26,4 +26,11 @@ Python 3.10+ (Backend, Conda "astro" env), Node.js 18+ (Frontend): Follow standa
 - 001-core-architecture: Added Python 3.10+ (Backend, Conda "astro" env), Node.js 18+ (Frontend)
 
 <!-- MANUAL ADDITIONS START -->
+## Environment & Startup
+- **Backend**: Always activate the `astro` conda environment. Run from the `backend` directory using the module syntax.
+  ```bash
+  conda activate astro
+  cd backend
+  python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+  ```
 <!-- MANUAL ADDITIONS END -->
