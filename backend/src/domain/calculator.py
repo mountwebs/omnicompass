@@ -1,0 +1,38 @@
+from skyfield.api import Loader, Topos
+from .models import ObserverLocation, DirectionUpdate, CelestialBody
+import os
+
+class CelestialCalculator:
+    def __init__(self):
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        load = Loader(data_dir)
+        self.planets = load('de421.bsp')
+        self.ts = load.timescale()
+        self.earth = self.planets['earth']
+        self.sun = self.planets['sun']
+        self.mars = self.planets['mars']
+
+    def calculate_position(self, location: ObserverLocation, target: CelestialBody) -> DirectionUpdate:
+        t = self.ts.now()
+        observer = self.earth + Topos(latitude_degrees=location.latitude, 
+                                      longitude_degrees=location.longitude, 
+                                      elevation_m=location.elevation)
+        
+        if target == CelestialBody.SUN:
+            target_body = self.sun
+        elif target == CelestialBody.MARS:
+            target_body = self.mars
+        else:
+            # Fallback or error, but for now default to Sun
+            target_body = self.sun
+        
+        apparent = observer.at(t).observe(target_body).apparent()
+        alt, az, distance = apparent.altaz()
+        
+        return DirectionUpdate(
+            target_id=target.value,
+            azimuth=az.degrees,
+            altitude=alt.degrees,
+            distance_km=distance.km,
+            timestamp=t.utc_datetime()
+        )
