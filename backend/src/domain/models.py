@@ -5,6 +5,8 @@ from enum import Enum
 class CelestialBody(str, Enum):
     SUN = "SUN"
     MARS = "MARS"
+    VENUS = "VENUS"
+    SATURN = "SATURN"
 
 class ObserverLocation(BaseModel):
     latitude: float
