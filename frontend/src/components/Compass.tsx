@@ -17,6 +17,10 @@ export const Compass = () => {
     const [currentTarget, setCurrentTarget] = useState<string>("SUN");
     const [manualBearing, setManualBearing] = useState<number>(0);
     const [isManualMode, setIsManualMode] = useState<boolean>(false);
+    
+    const [isManualDirectionMode, setIsManualDirectionMode] = useState<boolean>(false);
+    const [manualAzimuth, setManualAzimuth] = useState<number>(0);
+    const [manualAltitude, setManualAltitude] = useState<number>(0);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -38,8 +42,10 @@ export const Compass = () => {
         // Init Services
         // Note: Hardcoded URL for MVP, should be env var
         const wsService = new WebSocketService('ws://localhost:8000/ws', (data: DirectionUpdate) => {
-            sceneManager.updateArrowPosition(data.azimuth, data.altitude);
-            setStatus(`Tracking: ${data.target_id} (Az: ${data.azimuth.toFixed(1)}, Alt: ${data.altitude.toFixed(1)})`);
+            if (!isManualDirectionModeRef.current) {
+                sceneManager.updateArrowPosition(data.azimuth, data.altitude);
+                setStatus(`Tracking: ${data.target_id} (Az: ${data.azimuth.toFixed(1)}, Alt: ${data.altitude.toFixed(1)})`);
+            }
         });
         wsService.connect();
         wsServiceRef.current = wsService;
@@ -74,11 +80,23 @@ export const Compass = () => {
         isManualModeRef.current = isManualMode;
     }, [isManualMode]);
 
+    const isManualDirectionModeRef = useRef(isManualDirectionMode);
+    useEffect(() => {
+        isManualDirectionModeRef.current = isManualDirectionMode;
+    }, [isManualDirectionMode]);
+
     useEffect(() => {
         if (isManualMode) {
             sceneManagerRef.current?.setCameraOrientation(manualBearing, 0, 0);
         }
     }, [isManualMode, manualBearing]);
+
+    useEffect(() => {
+        if (isManualDirectionMode) {
+            sceneManagerRef.current?.updateArrowPosition(manualAzimuth, manualAltitude);
+            setStatus(`Manual Direction (Az: ${manualAzimuth.toFixed(1)}, Alt: ${manualAltitude.toFixed(1)})`);
+        }
+    }, [isManualDirectionMode, manualAzimuth, manualAltitude]);
 
     const handleRequestPermission = async () => {
         if (!orientationServiceRef.current) return;
@@ -126,6 +144,43 @@ export const Compass = () => {
                                 style={{ width: '100%' }}
                             />
                             <span>{manualBearing}°</span>
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                    <label style={{ display: 'block' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={isManualDirectionMode} 
+                            onChange={(e) => setIsManualDirectionMode(e.target.checked)} 
+                        />
+                        Manual Direction
+                    </label>
+                    {isManualDirectionMode && (
+                        <div style={{ marginTop: 5 }}>
+                            <div style={{ marginBottom: 5 }}>
+                                <label>Azimuth: {manualAzimuth}°</label>
+                                <input 
+                                    type="range" 
+                                    min="0" 
+                                    max="360" 
+                                    value={manualAzimuth} 
+                                    onChange={(e) => setManualAzimuth(Number(e.target.value))} 
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+                            <div>
+                                <label>Altitude: {manualAltitude}°</label>
+                                <input 
+                                    type="range" 
+                                    min="-90" 
+                                    max="90" 
+                                    value={manualAltitude} 
+                                    onChange={(e) => setManualAltitude(Number(e.target.value))} 
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
