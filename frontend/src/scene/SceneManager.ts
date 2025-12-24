@@ -38,39 +38,30 @@ export class SceneManager {
     }
 
     public setCameraOrientation(alpha: number | null, beta: number | null, gamma: number | null) {
-        if (alpha === null || beta === null || gamma === null) return;
+        if (alpha === null) return;
 
         // Convert degrees to radians
-        const alphaRad = alpha * (Math.PI / 180);
-        const betaRad = beta * (Math.PI / 180);
-        const gammaRad = gamma * (Math.PI / 180);
-
-        const euler = new THREE.Euler();
-        // Order depends on device, usually ZXY or YXZ for device orientation
-        // This is a simplified implementation. 
-        // For robust implementation we would need to handle screen orientation as well.
+        const alphaRad = THREE.MathUtils.degToRad(alpha);
         
-        // Three.js convention:
-        // alpha: rotation around Z axis
-        // beta: rotation around X axis
-        // gamma: rotation around Y axis
+        // Orbit the camera around the center (0,0,0) based on the bearing (alpha)
+        // Radius
+        const r = 5;
         
-        // Note: This is an approximation. 
-        // DeviceOrientationControls from Three.js handles this much better with Quaternions.
-        // Since it's missing, we might want to look for a copy or implementation.
+        // Calculate camera position
+        // Alpha = 0 (North) -> Camera at (0, 0, 5) looking at (0, 0, 0) (Looking North/-Z)
+        // Alpha = 90 (East) -> Camera at (-5, 0, 0) looking at (0, 0, 0) (Looking East/+X)
+        const x = -r * Math.sin(alphaRad);
+        const z = r * Math.cos(alphaRad);
         
-        // For now, let's try to set rotation directly
-        // But actually, without DeviceOrientationControls, it's hard to get right.
-        // Let's try to find if we can install it separately or if I missed it.
+        // For now, we keep the camera level (y=0) to simplify the compass view
+        // We could incorporate beta (tilt) to look up/down, but for a compass 
+        // it's often better to keep the horizon stable.
         
-        // If I can't use the control, I will just leave the camera static for now 
-        // and rotate the ARROW relative to the camera? 
-        // No, the arrow points to absolute North/Sun. The camera represents the phone.
-        // So if I rotate the phone, the camera rotates, and the arrow should stay fixed in WORLD space,
-        // which means it moves in CAMERA space.
+        this.camera.position.set(x, 0, z);
+        this.camera.lookAt(0, 0, 0);
         
-        // Let's use a simple Euler rotation for MVP
-        this.camera.rotation.set(betaRad, alphaRad, -gammaRad, 'YXZ'); 
+        // Optional: Apply screen orientation or gamma (roll) if needed
+        // But for the basic "stay in place" requirement, this orbit is key.
     }
 
     public addArrow(arrow: THREE.Group) {

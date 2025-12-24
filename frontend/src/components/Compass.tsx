@@ -10,10 +10,13 @@ export const Compass = () => {
     const containerRef = useRef<HTMLDivElement>(null);
     const sceneManagerRef = useRef<SceneManager | null>(null);
     const wsServiceRef = useRef<WebSocketService | null>(null);
+    const orientationServiceRef = useRef<DeviceOrientationService | null>(null);
     
     const [status, setStatus] = useState<string>("Initializing...");
     const [permissionGranted, setPermissionGranted] = useState<boolean>(false);
     const [currentTarget, setCurrentTarget] = useState<string>("SUN");
+    const [manualBearing, setManualBearing] = useState<number>(0);
+    const [isManualMode, setIsManualMode] = useState<boolean>(false);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -47,22 +50,43 @@ export const Compass = () => {
             wsService.sendLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.altitude || 0);
         });
 
+        // Init Orientation Service (but don't start yet)
+        // We use a ref for the callback to avoid stale closures if we were to define it here
+        // But since we need to access isManualMode, we'll use a mutable ref for that state
+        orientationServiceRef.current = new DeviceOrientationService((orientation) => {
+            if (!isManualModeRef.current) {
+                sceneManagerRef.current?.setCameraOrientation(orientation.alpha, orientation.beta, orientation.gamma);
+            }
+        });
+
         // Cleanup
         return () => {
             locationService.clearWatch(watchId);
             wsService.disconnect();
             sceneManager.dispose();
+            orientationServiceRef.current?.stop();
         };
-    }, []);
+    }, []); 
+
+    // Keep the ref in sync with state
+    const isManualModeRef = useRef(isManualMode);
+    useEffect(() => {
+        isManualModeRef.current = isManualMode;
+    }, [isManualMode]);
+
+    useEffect(() => {
+        if (isManualMode) {
+            sceneManagerRef.current?.setCameraOrientation(manualBearing, 0, 0);
+        }
+    }, [isManualMode, manualBearing]);
 
     const handleRequestPermission = async () => {
-        const orientationService = new DeviceOrientationService((orientation) => {
-            sceneManagerRef.current?.setCameraOrientation(orientation.alpha, orientation.beta, orientation.gamma);
-        });
-        const granted = await orientationService.requestPermission();
+        if (!orientationServiceRef.current) return;
+        
+        const granted = await orientationServiceRef.current.requestPermission();
         if (granted) {
             setPermissionGranted(true);
-            orientationService.start();
+            orientationServiceRef.current.start();
         } else {
             setStatus("Orientation permission denied");
         }
@@ -81,6 +105,30 @@ export const Compass = () => {
                 {!permissionGranted && (
                     <button onClick={handleRequestPermission}>Enable Orientation</button>
                 )}
+                
+                <div style={{ marginTop: 10 }}>
+                    <label style={{ display: 'block' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={isManualMode} 
+                            onChange={(e) => setIsManualMode(e.target.checked)} 
+                        />
+                        Manual Bearing
+                    </label>
+                    {isManualMode && (
+                        <div style={{ marginTop: 5 }}>
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max="360" 
+                                value={manualBearing} 
+                                onChange={(e) => setManualBearing(Number(e.target.value))} 
+                                style={{ width: '100%' }}
+                            />
+                            <span>{manualBearing}°</span>
+                        </div>
+                    )}
+                </div>
             </div>
             <TargetSelector currentTarget={currentTarget} onSelectTarget={handleSelectTarget} />
         </div>
