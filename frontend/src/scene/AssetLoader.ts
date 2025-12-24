@@ -14,10 +14,19 @@ export class AssetLoader {
             this.loader.load(
                 arrowUrl,
                 (object) => {
-                    // Normalize scale and position if needed
-                    // We might need to adjust this based on the actual model size
+                    // Create a container group to handle orientation correction
+                    const container = new THREE.Group();
+                    
+                    // Normalize scale
                     object.scale.set(0.01, 0.01, 0.01); 
-                    resolve(object);
+                    
+                    // Fix orientation: 
+                    // The model seems to be pointing along the X axis.
+                    // We rotate it -90 degrees around Y to align it with +Z (which lookAt uses).
+                    object.rotation.y = -Math.PI / 2;
+
+                    container.add(object);
+                    resolve(container);
                 },
                 (xhr) => {
                     console.log((xhr.loaded / xhr.total * 100) + '% loaded');
