@@ -7,6 +7,7 @@ class CelestialBody(str, Enum):
     MARS = "MARS"
     VENUS = "VENUS"
     SATURN = "SATURN"
+    JUPITER = "JUPITER"
 
 class ObserverLocation(BaseModel):
     latitude: float
