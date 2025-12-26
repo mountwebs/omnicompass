@@ -31,3 +31,15 @@ def test_calculate_mars_position():
     
     assert update.target_id == "MARS"
     assert isinstance(update.azimuth, float)
+
+def test_calculate_moon_position():
+    calc = CelestialCalculator()
+    location = ObserverLocation(latitude=59.91, longitude=10.75, elevation=0)
+    update = calc.calculate_position(location, CelestialBody.MOON)
+    
+    assert update.target_id == "MOON"
+    assert isinstance(update.azimuth, float)
+    assert isinstance(update.altitude, float)
+    assert 0 <= update.azimuth <= 360
+    assert -90 <= update.altitude <= 90
+

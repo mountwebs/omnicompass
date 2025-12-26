@@ -14,6 +14,7 @@ class CelestialCalculator:
         self.venus = self.planets['venus']
         self.saturn = self.planets['saturn barycenter']
         self.jupiter = self.planets['jupiter barycenter']
+        self.moon = self.planets['moon']
 
     def calculate_position(self, location: ObserverLocation, target: CelestialBody) -> DirectionUpdate:
         t = self.ts.now()
@@ -31,6 +32,8 @@ class CelestialCalculator:
             target_body = self.saturn
         elif target == CelestialBody.JUPITER:
             target_body = self.jupiter
+        elif target == CelestialBody.MOON:
+            target_body = self.moon
         else:
             # Fallback or error, but for now default to Sun
             target_body = self.sun
