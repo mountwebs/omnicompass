@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { SceneManager } from '../scene/SceneManager';
 import { AssetLoader } from '../scene/AssetLoader';
 import { LocationService } from '../services/LocationService';
-import { WebSocketService, type DirectionUpdate } from '../services/WebSocketService';
+import { WebSocketService, type DirectionUpdate, type AircraftStatusPayload } from '../services/WebSocketService';
 import { DeviceOrientationService } from '../services/DeviceOrientationService';
 import { TargetSelector } from './TargetSelector';
+
+const AIRCRAFT_TARGET = 'AIRCRAFT_OVERHEAD';
 
 export const Compass = () => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -21,6 +23,17 @@ export const Compass = () => {
     const [isManualDirectionMode, setIsManualDirectionMode] = useState<boolean>(false);
     const [manualAzimuth, setManualAzimuth] = useState<number>(0);
     const [manualAltitude, setManualAltitude] = useState<number>(0);
+
+    const currentTargetRef = useRef(currentTarget);
+    useEffect(() => {
+        currentTargetRef.current = currentTarget;
+    }, [currentTarget]);
+
+    const handleAircraftStatus = useCallback((payload: AircraftStatusPayload) => {
+        if (currentTargetRef.current === AIRCRAFT_TARGET && payload.state === 'SEARCHING') {
+            setStatus('Searching for aircraft within 15 km...');
+        }
+    }, [setStatus]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -46,7 +59,7 @@ export const Compass = () => {
                 sceneManager.updateArrowPosition(data.azimuth, data.altitude);
                 setStatus(`Tracking: ${data.target_id} (Az: ${data.azimuth.toFixed(1)}, Alt: ${data.altitude.toFixed(1)})`);
             }
-        });
+        }, handleAircraftStatus);
         wsService.connect();
         wsServiceRef.current = wsService;
 
@@ -112,6 +125,9 @@ export const Compass = () => {
 
     const handleSelectTarget = (target: string) => {
         setCurrentTarget(target);
+        if (target === AIRCRAFT_TARGET) {
+            setStatus('Searching for aircraft within 15 km...');
+        }
         wsServiceRef.current?.switchTarget(target);
     };
 

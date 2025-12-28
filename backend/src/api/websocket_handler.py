@@ -1,9 +1,13 @@
 from fastapi import WebSocket, WebSocketDisconnect
 from ..domain.calculator import CelestialCalculator
 from ..domain.models import ObserverLocation, CelestialBody, DirectionUpdate
+from ..domain.aircraft_tracker import AircraftTracker
 import json
 import asyncio
-from datetime import datetime
+from typing import Optional
+
+AIRCRAFT_TARGET = "AIRCRAFT_OVERHEAD"
+
 
 class WebSocketHandler:
     def __init__(self, calculator: CelestialCalculator):
@@ -23,7 +27,9 @@ class WebSocketHandler:
         # State for this connection using a mutable container (dict) to share with closure
         state = {
             "location": None,
-            "target": CelestialBody.SUN
+            "target": CelestialBody.SUN,
+            "aircraft_tracker": AircraftTracker(self.calculator),
+            "aircraft_status": "IDLE"
         }
         
         # Start a background task for pushing updates
@@ -45,8 +51,14 @@ class WebSocketHandler:
                 elif message['type'] == 'SWITCH_TARGET':
                     payload = message['payload']
                     target_str = payload['target']
-                    if target_str in CelestialBody.__members__:
+                    if target_str == AIRCRAFT_TARGET:
+                        state["target"] = AIRCRAFT_TARGET
+                        state["aircraft_tracker"].reset()
+                        state["aircraft_status"] = "IDLE"
+                    elif target_str in CelestialBody.__members__:
                         state["target"] = CelestialBody(target_str)
+                        state["aircraft_tracker"].reset()
+                        state["aircraft_status"] = "IDLE"
                     
         except WebSocketDisconnect:
             self.disconnect(websocket)
@@ -63,9 +75,27 @@ class WebSocketHandler:
             while True:
                 location = state["location"]
                 target = state["target"]
-                
+
+                update: Optional[DirectionUpdate] = None
                 if location and target:
-                    update = self.calculator.calculate_position(location, target)
+                    if isinstance(target, CelestialBody):
+                        update = self.calculator.calculate_position(location, target)
+                    elif target == AIRCRAFT_TARGET:
+                        tracker: AircraftTracker = state["aircraft_tracker"]
+                        aircraft_update = await tracker.get_direction(location)
+                        if aircraft_update:
+                            update = aircraft_update
+                            if state["aircraft_status"] != "TRACKING":
+                                state["aircraft_status"] = "TRACKING"
+                        elif state["aircraft_status"] != "SEARCHING":
+                            state["aircraft_status"] = "SEARCHING"
+                            response = {
+                                "type": "AIRCRAFT_STATUS",
+                                "payload": {"state": "SEARCHING"}
+                            }
+                            await websocket.send_text(json.dumps(response))
+
+                if update:
                     response = {
                         "type": "POSITION_UPDATE",
                         "payload": update.model_dump(mode='json')

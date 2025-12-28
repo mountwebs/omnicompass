@@ -6,15 +6,25 @@ export type DirectionUpdate = {
     timestamp: string;
 };
 
+export type AircraftStatusPayload = {
+    state: 'SEARCHING' | 'TRACKING' | 'IDLE';
+};
+
 export class WebSocketService {
     private socket: WebSocket | null = null;
     private url: string;
     private onUpdate: (data: DirectionUpdate) => void;
     private shouldReconnect: boolean = true;
+    private onAircraftStatus?: (payload: AircraftStatusPayload) => void;
 
-    constructor(url: string, onUpdate: (data: DirectionUpdate) => void) {
+    constructor(
+        url: string,
+        onUpdate: (data: DirectionUpdate) => void,
+        onAircraftStatus?: (payload: AircraftStatusPayload) => void
+    ) {
         this.url = url;
         this.onUpdate = onUpdate;
+        this.onAircraftStatus = onAircraftStatus;
     }
 
     public connect() {
@@ -29,6 +39,8 @@ export class WebSocketService {
             const message = JSON.parse(event.data);
             if (message.type === 'POSITION_UPDATE') {
                 this.onUpdate(message.payload);
+            } else if (message.type === 'AIRCRAFT_STATUS' && this.onAircraftStatus) {
+                this.onAircraftStatus(message.payload);
             }
         };
 

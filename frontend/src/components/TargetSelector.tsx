@@ -19,6 +19,7 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({ currentTarget, o
                 <option value="SATURN">Saturn</option>
                 <option value="JUPITER">Jupiter</option>
                 <option value="MOON">Moon</option>
+                <option value="AIRCRAFT_OVERHEAD">Aircraft Overhead</option>
             </select>
         </div>
     );
