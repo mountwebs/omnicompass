@@ -9,8 +9,9 @@ Auto-generated from all feature plans. Last updated: 2025-12-23
 ## Project Structure
 
 ```text
-src/
-tests/
+backend/
+frontend/
+specs/
 ```
 
 ## Commands
@@ -32,5 +33,11 @@ Python 3.10+ (Backend, Conda "astro" env), Node.js 18+ (Frontend): Follow standa
   conda activate astro
   cd backend
   python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+  ```
+- **Frontend**: Vite + React. Run from the `frontend` directory.
+  ```bash
+  cd frontend
+  npm install
+  npm run dev -- --host
   ```
 <!-- MANUAL ADDITIONS END -->
