@@ -21,3 +21,9 @@ class DirectionUpdate(BaseModel):
     altitude: float
     distance_km: float
     timestamp: datetime
+    # Aircraft specific data
+    aircraft_altitude_m: float | None = None
+    ground_speed_kmh: float | None = None
+    origin_airport: str | None = None
+    destination_airport: str | None = None
+    vertical_speed_mps: float | None = None

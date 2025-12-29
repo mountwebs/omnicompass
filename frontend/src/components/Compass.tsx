@@ -75,7 +75,23 @@ export const Compass = () => {
             if (!isManualDirectionModeRef.current) {
                 sceneManager.updateArrowPosition(data.azimuth, data.altitude);
                 const distStr = formatDistance(data.distance_km);
-                setStatus(`Tracking: ${data.target_id} (Az: ${data.azimuth.toFixed(1)}, Alt: ${data.altitude.toFixed(1)}, Dist: ${distStr})`);
+                
+                let info = `Tracking: ${data.target_id}\nAz: ${data.azimuth.toFixed(1)}°, Alt: ${data.altitude.toFixed(1)}°, Dist: ${distStr}`;
+                
+                if (data.aircraft_altitude_m !== undefined) {
+                     info += `\nFlight Alt: ${data.aircraft_altitude_m.toFixed(0)} m`;
+                }
+                if (data.ground_speed_kmh !== undefined) {
+                     info += `\nSpeed: ${data.ground_speed_kmh.toFixed(0)} km/h`;
+                }
+                if (data.vertical_speed_mps !== undefined) {
+                     info += `, V.Spd: ${data.vertical_speed_mps.toFixed(1)} m/s`;
+                }
+                if (data.origin_airport || data.destination_airport) {
+                     info += `\nRoute: ${data.origin_airport || '?'} -> ${data.destination_airport || '?'}`;
+                }
+
+                setStatus(info);
             }
         }, handleAircraftStatus);
         wsService.connect();
@@ -153,7 +169,7 @@ export const Compass = () => {
         <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
             <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
             <div style={{ position: 'absolute', top: 10, left: 10, color: 'white', background: 'rgba(0,0,0,0.5)', padding: 10 }}>
-                <p>{status}</p>
+                <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{status}</p>
                 {!permissionGranted && (
                     <button onClick={handleRequestPermission}>Enable Orientation</button>
                 )}

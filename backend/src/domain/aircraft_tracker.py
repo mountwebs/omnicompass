@@ -221,12 +221,27 @@ class AircraftTracker:
         apparent = observer_topos.at(t).observe(target_topos).apparent()
         alt, az, distance = apparent.altaz()
 
+        # Extract additional aircraft details
+        ground_speed_knots = float(getattr(flight, "ground_speed", 0) or 0)
+        ground_speed_kmh = ground_speed_knots * 1.852
+
+        origin = getattr(flight, "origin_airport_iata", None)
+        destination = getattr(flight, "destination_airport_iata", None)
+
+        vertical_speed_fpm = float(getattr(flight, "vertical_speed", 0) or 0)
+        vertical_speed_mps = vertical_speed_fpm * 0.00508
+
         return DirectionUpdate(
             target_id=self._format_target_id(flight),
             azimuth=az.degrees,
             altitude=alt.degrees,
             distance_km=distance.km,
             timestamp=t.utc_datetime(),
+            aircraft_altitude_m=altitude_m,
+            ground_speed_kmh=ground_speed_kmh,
+            origin_airport=origin,
+            destination_airport=destination,
+            vertical_speed_mps=vertical_speed_mps,
         )
 
     def _format_target_id(self, flight: Any) -> str:
