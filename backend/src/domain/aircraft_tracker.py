@@ -15,6 +15,16 @@ from .models import DirectionUpdate, ObserverLocation
 FEET_TO_METERS = 0.3048
 
 
+class _InterpolatedFlight:
+    def __init__(self, original: Any, latitude: float, longitude: float):
+        self._original = original
+        self.latitude = latitude
+        self.longitude = longitude
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._original, name)
+
+
 class AircraftTracker:
     """Polls FlightRadar24 for nearby aircraft and computes pointing data."""
 
@@ -34,6 +44,7 @@ class AircraftTracker:
 
         self._lock = asyncio.Lock()
         self._tracked_flight: Optional[Any] = None
+        self._last_flight_update_ts: Optional[float] = None
         self._last_fetch_ts: Optional[float] = None
         self._last_direction: Optional[DirectionUpdate] = None
         self._last_location: Optional[Tuple[float, float]] = None
@@ -56,9 +67,56 @@ class AircraftTracker:
                 # Preserve last_direction to avoid jittering between None and data
                 return None
 
-            direction = self._build_direction(observer, self._tracked_flight)
+            interpolated_flight = self._interpolate_flight(self._tracked_flight)
+            direction = self._build_direction(observer, interpolated_flight)
             self._last_direction = direction
             return direction
+
+    def _interpolate_flight(self, flight: Any) -> Any:
+        if not self._last_flight_update_ts:
+            return flight
+
+        # Use time.time() (UTC-ish) to calculate elapsed time since the data timestamp
+        now = time.time()
+        elapsed = now - self._last_flight_update_ts
+
+        if elapsed <= 0:
+            return flight
+
+        speed_knots = float(getattr(flight, "ground_speed", 0) or 0)
+        heading = float(getattr(flight, "heading", 0) or 0)
+
+        if speed_knots <= 0:
+            return flight
+
+        # 1 knot = 1.852 km/h
+        speed_kmh = speed_knots * 1.852
+        distance_km = speed_kmh * (elapsed / 3600.0)
+
+        lat = float(flight.latitude)
+        lon = float(flight.longitude)
+
+        new_lat, new_lon = self._calculate_new_position(lat, lon, distance_km, heading)
+
+        return _InterpolatedFlight(flight, new_lat, new_lon)
+
+    def _calculate_new_position(self, lat: float, lon: float, distance_km: float, bearing_deg: float) -> Tuple[float, float]:
+        R = 6371.0  # Earth radius in km
+        lat1 = math.radians(lat)
+        lon1 = math.radians(lon)
+        bearing = math.radians(bearing_deg)
+
+        lat2 = math.asin(
+            math.sin(lat1) * math.cos(distance_km / R)
+            + math.cos(lat1) * math.sin(distance_km / R) * math.cos(bearing)
+        )
+
+        lon2 = lon1 + math.atan2(
+            math.sin(bearing) * math.sin(distance_km / R) * math.cos(lat1),
+            math.cos(distance_km / R) - math.sin(lat1) * math.sin(lat2),
+        )
+
+        return math.degrees(lat2), math.degrees(lon2)
 
     def _needs_refresh(self, now: float) -> bool:
         if self._last_fetch_ts is None:
@@ -96,6 +154,9 @@ class AircraftTracker:
 
         updated = self._select_tracked_flight(observer, flights)
         self._tracked_flight = updated
+        if updated:
+            # Prefer the flight's timestamp if available, otherwise use current time
+            self._last_flight_update_ts = getattr(updated, "time", None) or time.time()
 
     def _fetch_flights(self, observer: ObserverLocation) -> list[Any]:
         bounds = self._api.get_bounds_by_point(
@@ -186,5 +247,6 @@ class AircraftTracker:
 
     def reset(self) -> None:
         self._tracked_flight = None
+        self._last_flight_update_ts = None
         self._last_fetch_ts = None
         self._last_direction = None
