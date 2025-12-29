@@ -24,10 +24,12 @@ class AircraftTracker:
         *,
         radius_km: float = 15.0,
         refresh_interval: float = 60.0,
+        tracking_interval: float = 10.0,
     ) -> None:
         self._calculator = calculator
         self._radius_km = radius_km
         self._refresh_interval = refresh_interval
+        self._tracking_interval = tracking_interval
         self._api = FlightRadar24API()
 
         self._lock = asyncio.Lock()
@@ -61,7 +63,9 @@ class AircraftTracker:
     def _needs_refresh(self, now: float) -> bool:
         if self._last_fetch_ts is None:
             return True
-        return (now - self._last_fetch_ts) >= self._refresh_interval
+
+        interval = self._tracking_interval if self._tracked_flight else self._refresh_interval
+        return (now - self._last_fetch_ts) >= interval
 
     def _location_shifted(self, observer: ObserverLocation) -> bool:
         coords = (observer.latitude, observer.longitude)
