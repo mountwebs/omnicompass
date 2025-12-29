@@ -167,14 +167,6 @@ class AircraftTracker:
         return self._api.get_flights(bounds=bounds)
 
     def _select_tracked_flight(self, observer: ObserverLocation, flights: list[Any]) -> Optional[Any]:
-        # Build index for quick lookups when we are already tracking a flight.
-        flight_by_id = {flight.id: flight for flight in flights if getattr(flight, "id", None)}
-
-        if self._tracked_flight and self._tracked_flight.id in flight_by_id:
-            candidate = flight_by_id[self._tracked_flight.id]
-            if self._within_radius(observer, candidate):
-                return candidate
-
         nearest: Optional[Tuple[float, Any]] = None
         for flight in flights:
             if flight.latitude is None or flight.longitude is None:
