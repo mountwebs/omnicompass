@@ -8,6 +8,23 @@ import { TargetSelector } from './TargetSelector';
 
 const AIRCRAFT_TARGET = 'AIRCRAFT_OVERHEAD';
 
+const formatDistance = (distanceKm: number): string => {
+    const AU_IN_KM = 149597870.7;
+    const LY_IN_KM = 9460730472580.8;
+
+    if (distanceKm < 1) {
+        return `${(distanceKm * 1000).toFixed(0)} m`;
+    } else if (distanceKm < 10000000) { // 10 million km
+        return `${distanceKm.toLocaleString(undefined, {maximumFractionDigits: 1})} km`;
+    } else if (distanceKm < LY_IN_KM) {
+        const au = distanceKm / AU_IN_KM;
+        return `${au.toFixed(2)} AU`;
+    } else {
+        const ly = distanceKm / LY_IN_KM;
+        return `${ly.toFixed(2)} ly`;
+    }
+};
+
 export const Compass = () => {
     const containerRef = useRef<HTMLDivElement>(null);
     const sceneManagerRef = useRef<SceneManager | null>(null);
@@ -57,7 +74,8 @@ export const Compass = () => {
         const wsService = new WebSocketService('ws://localhost:8000/ws', (data: DirectionUpdate) => {
             if (!isManualDirectionModeRef.current) {
                 sceneManager.updateArrowPosition(data.azimuth, data.altitude);
-                setStatus(`Tracking: ${data.target_id} (Az: ${data.azimuth.toFixed(1)}, Alt: ${data.altitude.toFixed(1)})`);
+                const distStr = formatDistance(data.distance_km);
+                setStatus(`Tracking: ${data.target_id} (Az: ${data.azimuth.toFixed(1)}, Alt: ${data.altitude.toFixed(1)}, Dist: ${distStr})`);
             }
         }, handleAircraftStatus);
         wsService.connect();
