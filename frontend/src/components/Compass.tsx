@@ -78,6 +78,10 @@ export const Compass = () => {
                 
                 let info = `Tracking: ${data.target_id}\nAz: ${data.azimuth.toFixed(1)}°, Alt: ${data.altitude.toFixed(1)}°, Dist: ${distStr}`;
                 
+                if (data.horizontal_distance_km !== undefined) {
+                     info += `\nHoriz Dist: ${formatDistance(data.horizontal_distance_km)}`;
+                }
+
                 if (data.aircraft_altitude_m !== undefined) {
                      info += `\nFlight Alt: ${data.aircraft_altitude_m.toFixed(0)} m`;
                 }

@@ -27,3 +27,4 @@ class DirectionUpdate(BaseModel):
     origin_airport: str | None = None
     destination_airport: str | None = None
     vertical_speed_mps: float | None = None
+    horizontal_distance_km: float | None = None

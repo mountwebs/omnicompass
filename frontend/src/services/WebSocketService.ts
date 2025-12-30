@@ -9,6 +9,7 @@ export type DirectionUpdate = {
     origin_airport?: string;
     destination_airport?: string;
     vertical_speed_mps?: number;
+    horizontal_distance_km?: number;
 };
 
 export type AircraftStatusPayload = {

@@ -231,6 +231,11 @@ class AircraftTracker:
         vertical_speed_fpm = float(getattr(flight, "vertical_speed", 0) or 0)
         vertical_speed_mps = vertical_speed_fpm * 0.00508
 
+        horizontal_distance = self._surface_distance_km(
+            (observer.latitude, observer.longitude),
+            (float(flight.latitude), float(flight.longitude))
+        )
+
         return DirectionUpdate(
             target_id=self._format_target_id(flight),
             azimuth=az.degrees,
@@ -242,6 +247,7 @@ class AircraftTracker:
             origin_airport=origin,
             destination_airport=destination,
             vertical_speed_mps=vertical_speed_mps,
+            horizontal_distance_km=horizontal_distance,
         )
 
     def _format_target_id(self, flight: Any) -> str:
