@@ -22,6 +22,11 @@ export const Compass = () => {
     const [manualAzimuth, setManualAzimuth] = useState<number>(0);
     const [manualAltitude, setManualAltitude] = useState<number>(0);
 
+    const [isManualLocationMode, setIsManualLocationMode] = useState<boolean>(false);
+    const [manualLatitude, setManualLatitude] = useState<number>(0);
+    const [manualLongitude, setManualLongitude] = useState<number>(0);
+    const [manualElevation, setManualElevation] = useState<number>(0);
+
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -53,7 +58,9 @@ export const Compass = () => {
         const locationService = new LocationService();
         // Watch position
         const watchId = locationService.watchPosition((pos) => {
-            wsService.sendLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.altitude || 0);
+            if (!isManualLocationModeRef.current) {
+                wsService.sendLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.altitude || 0);
+            }
         });
 
         // Init Orientation Service (but don't start yet)
@@ -85,6 +92,11 @@ export const Compass = () => {
         isManualDirectionModeRef.current = isManualDirectionMode;
     }, [isManualDirectionMode]);
 
+    const isManualLocationModeRef = useRef(isManualLocationMode);
+    useEffect(() => {
+        isManualLocationModeRef.current = isManualLocationMode;
+    }, [isManualLocationMode]);
+
     useEffect(() => {
         if (isManualMode) {
             sceneManagerRef.current?.setCameraOrientation(manualBearing, 0, 0);
@@ -97,6 +109,13 @@ export const Compass = () => {
             setStatus(`Manual Direction (Az: ${manualAzimuth.toFixed(1)}, Alt: ${manualAltitude.toFixed(1)})`);
         }
     }, [isManualDirectionMode, manualAzimuth, manualAltitude]);
+
+    useEffect(() => {
+        if (isManualLocationMode) {
+            wsServiceRef.current?.sendLocation(manualLatitude, manualLongitude, manualElevation);
+            setStatus(`Manual Location (Lat: ${manualLatitude}, Lon: ${manualLongitude}, Alt: ${manualElevation})`);
+        }
+    }, [isManualLocationMode, manualLatitude, manualLongitude, manualElevation]);
 
     const handleRequestPermission = async () => {
         if (!orientationServiceRef.current) return;
@@ -179,6 +198,48 @@ export const Compass = () => {
                                     value={manualAltitude} 
                                     onChange={(e) => setManualAltitude(Number(e.target.value))} 
                                     style={{ width: '100%' }}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                    <label style={{ display: 'block' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={isManualLocationMode} 
+                            onChange={(e) => setIsManualLocationMode(e.target.checked)} 
+                        />
+                        Manual Location
+                    </label>
+                    {isManualLocationMode && (
+                        <div style={{ marginTop: 5 }}>
+                            <div style={{ marginBottom: 5 }}>
+                                <label>Lat: </label>
+                                <input 
+                                    type="number" 
+                                    value={manualLatitude} 
+                                    onChange={(e) => setManualLatitude(Number(e.target.value))} 
+                                    style={{ width: '60px' }}
+                                />
+                            </div>
+                            <div style={{ marginBottom: 5 }}>
+                                <label>Lon: </label>
+                                <input 
+                                    type="number" 
+                                    value={manualLongitude} 
+                                    onChange={(e) => setManualLongitude(Number(e.target.value))} 
+                                    style={{ width: '60px' }}
+                                />
+                            </div>
+                            <div>
+                                <label>Elev: </label>
+                                <input 
+                                    type="number" 
+                                    value={manualElevation} 
+                                    onChange={(e) => setManualElevation(Number(e.target.value))} 
+                                    style={{ width: '60px' }}
                                 />
                             </div>
                         </div>
