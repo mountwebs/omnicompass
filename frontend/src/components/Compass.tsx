@@ -36,10 +36,6 @@ export const Compass = () => {
     const [currentTarget, setCurrentTarget] = useState<string>("SUN");
     const [manualBearing, setManualBearing] = useState<number>(0);
     const [isManualMode, setIsManualMode] = useState<boolean>(false);
-    
-    const [isManualDirectionMode, setIsManualDirectionMode] = useState<boolean>(false);
-    const [manualAzimuth, setManualAzimuth] = useState<number>(0);
-    const [manualAltitude, setManualAltitude] = useState<number>(0);
 
     const currentTargetRef = useRef(currentTarget);
     useEffect(() => {
@@ -72,23 +68,22 @@ export const Compass = () => {
         // Init Services
         // Note: Hardcoded URL for MVP, should be env var
         const wsService = new WebSocketService('ws://localhost:8000/ws', (data: DirectionUpdate) => {
-            if (!isManualDirectionModeRef.current) {
-                sceneManager.updateArrowPosition(data.azimuth, data.altitude);
+            sceneManager.updateArrowPosition(data.azimuth, data.altitude);
                 const distStr = formatDistance(data.distance_km);
                 
                 let info = `Tracking: ${data.target_id}\nAz: ${data.azimuth.toFixed(1)}°, Alt: ${data.altitude.toFixed(1)}°, Dist: ${distStr}`;
                 
-                if (data.horizontal_distance_km !== undefined) {
+                if (data.horizontal_distance_km != null) {
                      info += `\nHoriz Dist: ${formatDistance(data.horizontal_distance_km)}`;
                 }
 
-                if (data.aircraft_altitude_m !== undefined) {
+                if (data.aircraft_altitude_m != null) {
                      info += `\nFlight Alt: ${data.aircraft_altitude_m.toFixed(0)} m`;
                 }
-                if (data.ground_speed_kmh !== undefined) {
+                if (data.ground_speed_kmh != null) {
                      info += `\nSpeed: ${data.ground_speed_kmh.toFixed(0)} km/h`;
                 }
-                if (data.vertical_speed_mps !== undefined) {
+                if (data.vertical_speed_mps != null) {
                      info += `, V.Spd: ${data.vertical_speed_mps.toFixed(1)} m/s`;
                 }
                 if (data.origin_airport || data.destination_airport) {
@@ -96,7 +91,6 @@ export const Compass = () => {
                 }
 
                 setStatus(info);
-            }
         }, handleAircraftStatus);
         wsService.connect();
         wsServiceRef.current = wsService;
@@ -131,23 +125,11 @@ export const Compass = () => {
         isManualModeRef.current = isManualMode;
     }, [isManualMode]);
 
-    const isManualDirectionModeRef = useRef(isManualDirectionMode);
-    useEffect(() => {
-        isManualDirectionModeRef.current = isManualDirectionMode;
-    }, [isManualDirectionMode]);
-
     useEffect(() => {
         if (isManualMode) {
             sceneManagerRef.current?.setCameraOrientation(manualBearing, 0, 0);
         }
     }, [isManualMode, manualBearing]);
-
-    useEffect(() => {
-        if (isManualDirectionMode) {
-            sceneManagerRef.current?.updateArrowPosition(manualAzimuth, manualAltitude);
-            setStatus(`Manual Direction (Az: ${manualAzimuth.toFixed(1)}, Alt: ${manualAltitude.toFixed(1)})`);
-        }
-    }, [isManualDirectionMode, manualAzimuth, manualAltitude]);
 
     const handleRequestPermission = async () => {
         if (!orientationServiceRef.current) return;
@@ -198,43 +180,6 @@ export const Compass = () => {
                                 style={{ width: '100%' }}
                             />
                             <span>{manualBearing}°</span>
-                        </div>
-                    )}
-                </div>
-
-                <div style={{ marginTop: 10 }}>
-                    <label style={{ display: 'block' }}>
-                        <input 
-                            type="checkbox" 
-                            checked={isManualDirectionMode} 
-                            onChange={(e) => setIsManualDirectionMode(e.target.checked)} 
-                        />
-                        Manual Direction
-                    </label>
-                    {isManualDirectionMode && (
-                        <div style={{ marginTop: 5 }}>
-                            <div style={{ marginBottom: 5 }}>
-                                <label>Azimuth: {manualAzimuth}°</label>
-                                <input 
-                                    type="range" 
-                                    min="0" 
-                                    max="360" 
-                                    value={manualAzimuth} 
-                                    onChange={(e) => setManualAzimuth(Number(e.target.value))} 
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-                            <div>
-                                <label>Altitude: {manualAltitude}°</label>
-                                <input 
-                                    type="range" 
-                                    min="-90" 
-                                    max="90" 
-                                    value={manualAltitude} 
-                                    onChange={(e) => setManualAltitude(Number(e.target.value))} 
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
                         </div>
                     )}
                 </div>
