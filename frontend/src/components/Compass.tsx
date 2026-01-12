@@ -36,6 +36,7 @@ export const Compass = () => {
     const [currentTarget, setCurrentTarget] = useState<string>("SUN");
     const [manualBearing, setManualBearing] = useState<number>(0);
     const [isManualMode, setIsManualMode] = useState<boolean>(false);
+    const [currentPosition, setCurrentPosition] = useState<{ latitude: number; longitude: number; elevation: number } | null>(null);
 
     const currentTargetRef = useRef(currentTarget);
     useEffect(() => {
@@ -98,7 +99,11 @@ export const Compass = () => {
         const locationService = new LocationService();
         // Watch position
         const watchId = locationService.watchPosition((pos) => {
-            wsService.sendLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.altitude || 0);
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            const alt = pos.coords.altitude || 0;
+            setCurrentPosition({ latitude: lat, longitude: lon, elevation: alt });
+            wsService.sendLocation(lat, lon, alt);
         });
 
         // Init Orientation Service (but don't start yet)
@@ -156,6 +161,13 @@ export const Compass = () => {
             <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
             <div style={{ position: 'absolute', top: 10, left: 10, color: 'white', background: 'rgba(0,0,0,0.5)', padding: 10 }}>
                 <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{status}</p>
+                {currentPosition && (
+                    <p style={{ whiteSpace: 'pre-wrap', margin: '10px 0 0 0', fontSize: '12px' }}>
+                        Lat: {currentPosition.latitude.toFixed(6)}°
+                        {"\n"}Lon: {currentPosition.longitude.toFixed(6)}°
+                        {"\n"}Elev: {currentPosition.elevation.toFixed(1)} m
+                    </p>
+                )}
                 {!permissionGranted && (
                     <button onClick={handleRequestPermission}>Enable Orientation</button>
                 )}
