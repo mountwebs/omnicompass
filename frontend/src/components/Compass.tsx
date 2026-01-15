@@ -37,6 +37,12 @@ export const Compass = () => {
     const [manualBearing, setManualBearing] = useState<number>(0);
     const [isManualMode, setIsManualMode] = useState<boolean>(false);
     const [currentPosition, setCurrentPosition] = useState<{ latitude: number; longitude: number; elevation: number } | null>(null);
+    const [gpsPosition, setGpsPosition] = useState<{ latitude: number; longitude: number; elevation: number } | null>(null);
+    const [isManualPositionMode, setIsManualPositionMode] = useState<boolean>(false);
+    const [manualElevationOnly, setManualElevationOnly] = useState<boolean>(true);
+    const [manualLatitude, setManualLatitude] = useState<number>(0);
+    const [manualLongitude, setManualLongitude] = useState<number>(0);
+    const [manualElevation, setManualElevation] = useState<number>(0);
 
     const currentTargetRef = useRef(currentTarget);
     useEffect(() => {
@@ -102,8 +108,8 @@ export const Compass = () => {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
             const alt = pos.coords.altitude || 0;
-            setCurrentPosition({ latitude: lat, longitude: lon, elevation: alt });
-            wsService.sendLocation(lat, lon, alt);
+            setGpsPosition({ latitude: lat, longitude: lon, elevation: alt });
+            // Will be handled by effect that checks manual mode
         });
 
         // Init Orientation Service (but don't start yet)
@@ -130,11 +136,43 @@ export const Compass = () => {
         isManualModeRef.current = isManualMode;
     }, [isManualMode]);
 
+    const isManualPositionModeRef = useRef(isManualPositionMode);
+    useEffect(() => {
+        isManualPositionModeRef.current = isManualPositionMode;
+    }, [isManualPositionMode]);
+
     useEffect(() => {
         if (isManualMode) {
             sceneManagerRef.current?.setCameraOrientation(manualBearing, 0, 0);
         }
     }, [isManualMode, manualBearing]);
+
+    useEffect(() => {
+        if (!gpsPosition) return;
+        
+        let lat, lon, elev;
+        if (isManualPositionMode) {
+            if (manualElevationOnly) {
+                // Use automatic lat/lon with manual elevation
+                lat = gpsPosition.latitude;
+                lon = gpsPosition.longitude;
+                elev = manualElevation;
+            } else {
+                // Use all manual values
+                lat = manualLatitude;
+                lon = manualLongitude;
+                elev = manualElevation;
+            }
+        } else {
+            // Use GPS position
+            lat = gpsPosition.latitude;
+            lon = gpsPosition.longitude;
+            elev = gpsPosition.elevation;
+        }
+        
+        setCurrentPosition({ latitude: lat, longitude: lon, elevation: elev });
+        wsServiceRef.current?.sendLocation(lat, lon, elev);
+    }, [isManualPositionMode, manualElevationOnly, manualLatitude, manualLongitude, manualElevation, gpsPosition]);
 
     const handleRequestPermission = async () => {
         if (!orientationServiceRef.current) return;
@@ -192,6 +230,63 @@ export const Compass = () => {
                                 style={{ width: '100%' }}
                             />
                             <span>{manualBearing}°</span>
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                    <label style={{ display: 'block' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={isManualPositionMode} 
+                            onChange={(e) => setIsManualPositionMode(e.target.checked)} 
+                        />
+                        Manual Position
+                    </label>
+                    {isManualPositionMode && (
+                        <div style={{ marginTop: 5 }}>
+                            <label style={{ display: 'block', marginBottom: 5 }}>
+                                <input 
+                                    type="checkbox" 
+                                    checked={manualElevationOnly} 
+                                    onChange={(e) => setManualElevationOnly(e.target.checked)} 
+                                />
+                                Elevation Only
+                            </label>
+                            {!manualElevationOnly && (
+                                <>
+                                    <div style={{ marginBottom: 5 }}>
+                                        <label style={{ display: 'block', fontSize: '12px' }}>Latitude</label>
+                                        <input 
+                                            type="number" 
+                                            step="0.000001"
+                                            value={manualLatitude} 
+                                            onChange={(e) => setManualLatitude(Number(e.target.value))} 
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                    <div style={{ marginBottom: 5 }}>
+                                        <label style={{ display: 'block', fontSize: '12px' }}>Longitude</label>
+                                        <input 
+                                            type="number" 
+                                            step="0.000001"
+                                            value={manualLongitude} 
+                                            onChange={(e) => setManualLongitude(Number(e.target.value))} 
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                </>
+                            )}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '12px' }}>Elevation (m)</label>
+                                <input 
+                                    type="number" 
+                                    step="1"
+                                    value={manualElevation} 
+                                    onChange={(e) => setManualElevation(Number(e.target.value))} 
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
