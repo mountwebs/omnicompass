@@ -54,18 +54,19 @@ class ControllerState:
 
 @dataclass
 class SerialConfig:
-    port: str
+    port: Optional[str]
     baudrate: int = 115200
     read_timeout: float = 0.2
     busy_retry_delay: float = 0.5
 
 
 class ArrowCli:
-    def __init__(self, serial_conn: Serial, math: GearMath, config: SerialConfig) -> None:
+    def __init__(self, serial_conn: Optional[Serial], math: GearMath, config: SerialConfig, test_mode: bool = False) -> None:
         self.serial = serial_conn
         self.math = math
         self.config = config
         self.state = ControllerState()
+        self.test_mode = test_mode
 
     def run(self) -> None:
         self._print_banner()
@@ -120,6 +121,12 @@ class ArrowCli:
 
     def _execute_move(self, a_target: int, b_target: int) -> None:
         command = f"GOTO {a_target} {b_target}\n"
+        
+        if self.test_mode:
+            print(f"[TEST] Sending: {command.strip()}")
+            self._update_state(a_target, b_target)
+            return
+
         encoded = command.encode("ascii")
 
         while True:
@@ -242,9 +249,15 @@ def parse_args() -> argparse.Namespace:
         default=0.5,
         help="Delay before resending command after 'busy' response.",
     )
+    parser.add_argument(
+        "--test",
+        "-t",
+        action="store_true",
+        help="Run in test mode without serial connection.",
+    )
     args = parser.parse_args()
 
-    if not args.port:
+    if not args.test and not args.port:
         parser.error("Serial port is required. Use --port or set OMNICOMPASS_SERIAL_PORT.")
 
     return args
@@ -263,6 +276,12 @@ def main() -> int:
         read_timeout=args.read_timeout,
         busy_retry_delay=args.busy_retry,
     )
+
+    if args.test:
+        print("Running in TEST mode (no serial connection).")
+        cli = ArrowCli(None, math, config, test_mode=True)
+        cli.run()
+        return 0
 
     try:
         with serial.Serial(
