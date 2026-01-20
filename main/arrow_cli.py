@@ -124,6 +124,17 @@ class ArrowCli:
         
         if self.test_mode:
             print(f"[TEST] Sending: {command.strip()}")
+            
+            # Show simulated movement
+            current_a = self.state.a_steps
+            current_b = self.state.b_steps
+            delta_a = a_target - current_a
+            delta_b = b_target - current_b
+            
+            print(f"[TEST] Simulating motor move:")
+            print(f"       Motor A: {current_a} -> {a_target} (delta {delta_a})")
+            print(f"       Motor B: {current_b} -> {b_target} (delta {delta_b})")
+
             self._update_state(a_target, b_target)
             return
 
