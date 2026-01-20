@@ -18,7 +18,7 @@ class GearMath:
     """Holds mechanical conversion constants and helpers."""
 
     motor_steps_per_rev: int = int(32.0 * 64.0)
-    microsteps: int = 16
+    microsteps: int = 1
     gear_ratio: float = 50.0 / 13.0
 
     @property
@@ -229,7 +229,7 @@ def parse_args() -> argparse.Namespace:
         "--motor-steps", type=int, default=int(32.0 * 64.0), help="Full steps per motor revolution."
     )
     parser.add_argument(
-        "--microsteps", type=int, default=16, help="Microsteps configured on driver."
+        "--microsteps", type=int, default=1, help="Microsteps configured on driver."
     )
     parser.add_argument(
         "--gear-ratio",
